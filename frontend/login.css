@@ -7,6 +7,7 @@ body {
     height: 100vh;
     margin: 0;
 }
+
 .login-container {
     background-color: #ffffff;
     padding: 40px;
@@ -16,19 +17,23 @@ body {
     max-width: 400px;
     text-align: center;
 }
+
 h2 {
     color: #1e3a5f;
     margin-bottom: 25px;
 }
+
 .input-group {
     margin-bottom: 20px;
     text-align: left;
 }
+
 label {
     display: block;
     margin-bottom: 8px;
     color: #555;
 }
+
 input {
     width: 100%;
     padding: 12px;
@@ -36,6 +41,7 @@ input {
     border-radius: 6px;
     box-sizing: border-box;
 }
+
 .login-btn {
     width: 100%;
     padding: 14px;
@@ -47,11 +53,13 @@ input {
     font-size: 16px;
     font-weight: bold;
 }
+
 .error-message {
     color: #d9534f;
     margin-top: 15px;
     height: 20px;
 }
+
 /* Add these new rules to the end of login.css */
 
 /* Makes the div an anchor for positioning the icon button */
@@ -65,14 +73,32 @@ input {
     /* Position it vertically inside the input field */
     bottom: 11px;
     right: 15px;
-    
+
     /* Remove default button styles */
     background: none;
     border: none;
     padding: 0;
     cursor: pointer;
-    
+
     /* Style the SVG icon itself */
+    color: #888;
+    display: flex;
+    align-items: center;
+}
+
+.toggle-password-icon {
+    position: absolute;
+    /* Position the top edge of the icon at the vertical center of the container */
+    top: 50%;
+    right: 15px;
+    /* Pull the icon back up by half its own height to perfectly center it */
+    transform: translateY(-50%);
+
+    /* Keep the rest of the styles */
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
     color: #888;
     display: flex;
     align-items: center;
