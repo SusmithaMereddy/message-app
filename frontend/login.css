@@ -60,31 +60,35 @@ input {
     height: 20px;
 }
 
-/* START: Replace all old password-icon styles with this block */
+/* START: Replace all previous password icon styles with this block */
 
-/* 1. Make the container a positioning anchor */
+/* This makes the div an anchor for the icon's position */
 .password-group {
     position: relative;
 }
 
-/* 2. Add padding to the input to make space for the icon */
-.password-group input#password {
-    padding-right: 45px;
+/* This adds space on the right of the input field for the icon to occupy */
+.password-group input {
+    padding-right: 40px; /* Make space for the icon */
 }
 
-/* 3. Style and position the icon button itself */
-.password-group .toggle-password-icon {
+/* This positions the icon itself */
+.toggle-password-icon {
     position: absolute;
-    /* Position the top of the icon at the 50% mark of the input field's parent */
-    top: 50%;
-    right: 15px;
-    /* Pull the icon up by 50% of its own height to perfectly center it */
-    transform: translateY(-50%);
-
-    /* These styles are correct */
-    background: transparent;
+    /* Position it from the bottom right corner of the input field */
+    right: 12px;
+    bottom: 12px;
+    
+    /* Remove default button styling */
+    background: none;
     border: none;
     padding: 0;
     cursor: pointer;
+
+    /* Style the SVG icon */
     color: #888;
+    display: flex;
+    align-items: center;
 }
+
+/* END: Replacement block */
