@@ -1,30 +1,39 @@
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     const errorMessage = document.getElementById('error-message');
-
-    // START: Add this new block of code for the eye icon
     const passwordInput = document.getElementById('password');
-    const togglePassword = document.getElementById('toggle-password');
+    const togglePasswordBtn = document.getElementById('toggle-password');
+    const eyeOpenIcon = document.getElementById('eye-open');
+    const eyeClosedIcon = document.getElementById('eye-closed');
 
-    togglePassword.addEventListener('click', () => {
-        // Toggle the type attribute
-        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-        passwordInput.setAttribute('type', type);
+    // Event listener for the icon button
+    togglePasswordBtn.addEventListener('click', () => {
+        const isPassword = passwordInput.getAttribute('type') === 'password';
 
-        // Toggle the eye icon
-        togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+        if (isPassword) {
+            // Change to text (show password)
+            passwordInput.setAttribute('type', 'text');
+            // Show the closed eye icon
+            eyeOpenIcon.style.display = 'none';
+            eyeClosedIcon.style.display = 'block';
+        } else {
+            // Change back to password (hide password)
+            passwordInput.setAttribute('type', 'password');
+            // Show the open eye icon
+            eyeOpenIcon.style.display = 'block';
+            eyeClosedIcon.style.display = 'none';
+        }
     });
-    // END: New block of code
 
+    // Event listener for the form submission
     loginForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         errorMessage.textContent = '';
 
         const username = document.getElementById('username').value;
-        const password = passwordInput.value; // Use the variable we already have
+        const password = passwordInput.value;
 
         try {
-            // This URL should be relative for the CI/CD pipeline
             const response = await fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

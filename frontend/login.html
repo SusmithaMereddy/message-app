@@ -16,11 +16,27 @@
                 <label for="username">Username</label>
                 <input type="text" id="username" required>
             </div>
-            <div class="input-group password-group"> <!-- Add a class for styling -->
+            <div class="input-group password-group">
                 <label for="password">Password</label>
                 <input type="password" id="password" required>
-                <!-- This is the new icon -->
-                <span id="toggle-password" class="toggle-password-icon">👁️</span>
+                <!-- This button holds our new SVG icons -->
+                <button type="button" id="toggle-password" class="toggle-password-icon">
+                    <!-- Open Eye Icon (Visible by default) -->
+                    <svg id="eye-open" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+                        viewBox="0 0 16 16">
+                        <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0" />
+                        <path
+                            d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8m11.25.75a3.5 3.5 0 1 0-7 0 3.5 3.5 0 0 0 7 0" />
+                    </svg>
+                    <!-- Slashed Eye Icon (Hidden by default) -->
+                    <svg id="eye-closed" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+                        viewBox="0 0 16 16" style="display: none;">
+                        <path
+                            d="m10.79 12.912-1.614-1.615a3.5 3.5 0 0 1-4.474-4.474l-2.06-2.06C.938 6.278 0 8 0 8s3 5.5 8 5.5a7 7 0 0 0 2.79-.588M5.21 3.088A7 7 0 0 1 8 2.5c5 0 8 5.5 8 5.5s-.938 1.721-2.641 3.238l-2.062-2.062a3.5 3.5 0 0 0-4.474-4.474z" />
+                        <path
+                            d="M5.525 7.646a2.5 2.5 0 0 0 2.829 2.829l-2.83-2.829zm4.95.708-2.829-2.83a2.5 2.5 0 0 1 2.829 2.829zm3.171 6-12-12 .708-.708 12 12z" />
+                    </svg>
+                </button>
             </div>
             <button type="submit" class="login-btn">Login</button>
             <p id="error-message" class="error-message"></p>

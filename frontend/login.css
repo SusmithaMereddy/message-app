@@ -52,17 +52,33 @@ input {
     margin-top: 15px;
     height: 20px;
 }
+/* Add these new rules to the end of login.css */
 
-/* This makes the container a positioning anchor for the icon */
+/* Makes the div an anchor for positioning the icon button */
 .password-group {
     position: relative;
 }
 
-/* This styles and positions the icon */
+/* Styles the button to look like a simple icon */
 .toggle-password-icon {
     position: absolute;
-    top: 40px; /* Adjust this value to vertically center the icon */
+    /* Position it vertically inside the input field */
+    bottom: 11px;
     right: 15px;
+    
+    /* Remove default button styles */
+    background: none;
+    border: none;
+    padding: 0;
     cursor: pointer;
-    user-select: none; /* Prevents the icon text from being selected */
+    
+    /* Style the SVG icon itself */
+    color: #888;
+    display: flex;
+    align-items: center;
+}
+
+/* Add padding to the right of the password input to make space for the icon */
+#password {
+    padding-right: 45px;
 }
