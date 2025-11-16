@@ -74,20 +74,17 @@ input {
 
 /* 3. Style and position the icon button itself */
 .password-group .toggle-password-icon {
-    /* Position it absolutely within the .password-group container */
     position: absolute;
+    /* Position the top of the icon at the 50% mark of the input field's parent */
+    top: 50%;
     right: 15px;
-    top: 38px;
-    /* This positions the top of the icon relative to the label */
+    /* Pull the icon up by 50% of its own height to perfectly center it */
+    transform: translateY(-50%);
 
-    /* Remove all default button styling */
+    /* These styles are correct */
     background: transparent;
     border: none;
     padding: 0;
     cursor: pointer;
-
-    /* Style the SVG icon inside the button */
     color: #888;
 }
-
-/* END: Replacement block */

@@ -1,37 +1,34 @@
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     const errorMessage = document.getElementById('error-message');
+    
+    // --- Eye Icon Logic ---
     const passwordInput = document.getElementById('password');
     const togglePasswordBtn = document.getElementById('toggle-password');
     const eyeOpenIcon = document.getElementById('eye-open');
     const eyeClosedIcon = document.getElementById('eye-closed');
 
-    // Event listener for the icon button
     togglePasswordBtn.addEventListener('click', () => {
         const isPassword = passwordInput.getAttribute('type') === 'password';
-
         if (isPassword) {
-            // Change to text (show password)
             passwordInput.setAttribute('type', 'text');
-            // Show the closed eye icon
             eyeOpenIcon.style.display = 'none';
             eyeClosedIcon.style.display = 'block';
         } else {
-            // Change back to password (hide password)
             passwordInput.setAttribute('type', 'password');
-            // Show the open eye icon
             eyeOpenIcon.style.display = 'block';
             eyeClosedIcon.style.display = 'none';
         }
     });
 
-    // Event listener for the form submission
+    // --- Form Submission Logic ---
     loginForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         errorMessage.textContent = '';
 
+        // THIS IS THE CORRECTED PART: Get values directly from the form fields by ID
         const username = document.getElementById('username').value;
-        const password = passwordInput.value;
+        const password = document.getElementById('password').value;
 
         try {
             const response = await fetch('/api/login', {
