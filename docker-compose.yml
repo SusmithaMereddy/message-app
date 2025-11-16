@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  backend:
+    build: ./backend  # Specifies the path to the backend's Dockerfile
+    container_name: backend-app
+    ports:
+      - "8081:8080"  # Map container's 8080 to host's 8081 to avoid conflict
+    depends_on:
+      - mongodb
+    environment:
+      - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/message_db
+      # For Azure, we'll set the frontend origin dynamically
+      - CORS_ALLOWED_ORIGINS=http://localhost:8080 
+      - JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Calcutta
+
+  frontend:
+    build: ./frontend # Specifies the path to the frontend's Dockerfile
+    container_name: frontend-app
+    ports:
+      - "8080:80"    # Map container's 80 to host's 8080 (our main entry point)
+    depends_on:
+      - backend
+
+volumes:
+  mongo-data:

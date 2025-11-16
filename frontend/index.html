@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Message App</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- 
+      This style block hides the page by default.
+      It prevents the user from seeing a "flash" of the main page
+      before the authentication check and redirect happen.
+    -->
+    <style>
+        body { visibility: hidden; }
+    </style>
+</head>
+<body>
+    <!-- 
+      This inline script runs immediately. If the user is authenticated,
+      it makes the page visible. If not, the page remains hidden
+      while the main script.js performs the redirect.
+    -->
+    <script>
+        if (sessionStorage.getItem('authenticated')) {
+            document.body.style.visibility = 'visible';
+        }
+    </script>
+
+    <div class="main-container">
+        <div class="header">
+            <h2>Message Storage and Retrieval</h2>
+            <button id="logout-btn" class="logout-btn">Logout</button>
+        </div>
+
+        <div class="input-area">
+            <textarea id="message-input" placeholder="Enter your message here..." maxlength="250"></textarea>
+        </div>
+
+        <div class="input-footer">
+            <span id="char-counter">0 / 250</span>
+            <button id="send-btn">Send</button>
+        </div>
+
+        <button id="retrieve-btn">Retrieve</button>
+
+        <div class="messages-area">
+            <h3>Latest 10 Messages</h3>
+            <table id="message-table">
+                <thead>
+                    <tr>
+                        <th>Message</th>
+                        <th>Timestamp <br> (dd:mm:yyyy hh:mm:ss)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Messages will be populated here by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- This is the main application script that handles all functionality -->
+    <script src="script.js"></script>
+</body>
+</html>
