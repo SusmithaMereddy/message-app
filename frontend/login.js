@@ -2,16 +2,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     const errorMessage = document.getElementById('error-message');
 
+    // START: Add this new block of code for the eye icon
+    const passwordInput = document.getElementById('password');
+    const togglePassword = document.getElementById('toggle-password');
+
+    togglePassword.addEventListener('click', () => {
+        // Toggle the type attribute
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+
+        // Toggle the eye icon
+        togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+    });
+    // END: New block of code
+
     loginForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         errorMessage.textContent = '';
 
         const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
+        const password = passwordInput.value; // Use the variable we already have
 
         try {
-            //const response = await fetch('http://message-app-backend.internal.ambitiousground-a3ae7b53.centralindia.azurecontainerapps.io/api/login', {
-            // // //const response = await fetch('http://172.29.73.220:8081/api/login', {
+            // This URL should be relative for the CI/CD pipeline
             const response = await fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

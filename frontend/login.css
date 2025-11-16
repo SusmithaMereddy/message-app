@@ -52,3 +52,17 @@ input {
     margin-top: 15px;
     height: 20px;
 }
+
+/* This makes the container a positioning anchor for the icon */
+.password-group {
+    position: relative;
+}
+
+/* This styles and positions the icon */
+.toggle-password-icon {
+    position: absolute;
+    top: 40px; /* Adjust this value to vertically center the icon */
+    right: 15px;
+    cursor: pointer;
+    user-select: none; /* Prevents the icon text from being selected */
+}
