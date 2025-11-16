@@ -60,51 +60,34 @@ input {
     height: 20px;
 }
 
-/* Add these new rules to the end of login.css */
+/* START: Replace all old password-icon styles with this block */
 
-/* Makes the div an anchor for positioning the icon button */
+/* 1. Make the container a positioning anchor */
 .password-group {
     position: relative;
 }
 
-/* Styles the button to look like a simple icon */
-.toggle-password-icon {
-    position: absolute;
-    /* Position it vertically inside the input field */
-    bottom: 11px;
-    right: 15px;
-
-    /* Remove default button styles */
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-
-    /* Style the SVG icon itself */
-    color: #888;
-    display: flex;
-    align-items: center;
-}
-
-.toggle-password-icon {
-    position: absolute;
-    /* Position the top edge of the icon at the vertical center of the container */
-    top: 50%;
-    right: 15px;
-    /* Pull the icon back up by half its own height to perfectly center it */
-    transform: translateY(-50%);
-
-    /* Keep the rest of the styles */
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    color: #888;
-    display: flex;
-    align-items: center;
-}
-
-/* Add padding to the right of the password input to make space for the icon */
-#password {
+/* 2. Add padding to the input to make space for the icon */
+.password-group input#password {
     padding-right: 45px;
 }
+
+/* 3. Style and position the icon button itself */
+.password-group .toggle-password-icon {
+    /* Position it absolutely within the .password-group container */
+    position: absolute;
+    right: 15px;
+    top: 38px;
+    /* This positions the top of the icon relative to the label */
+
+    /* Remove all default button styling */
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+
+    /* Style the SVG icon inside the button */
+    color: #888;
+}
+
+/* END: Replacement block */
