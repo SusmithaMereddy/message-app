@@ -47,8 +47,8 @@ echo "==========================================================================
 
 case "$ACTION" in
   create)
+    # --- NO CHANGES IN THE CREATE BLOCK ---
     echo "Starting resource creation..."
-
     echo "--> Verifying Resource Group '$RESOURCE_GROUP'..."
     if az group show --name "$RESOURCE_GROUP" &>/dev/null; then
         echo "INFO: Resource Group '$RESOURCE_GROUP' already exists."
@@ -58,7 +58,6 @@ case "$ACTION" in
         echo "OK: Resource Group created."
     fi
     echo "-----------------------------------------------------------"
-
     echo "--> Verifying Azure Container Registry '$ACR_NAME'..."
     if az acr show --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" &>/dev/null; then
         echo "INFO: ACR '$ACR_NAME' already exists."
@@ -69,10 +68,9 @@ case "$ACTION" in
           --name "$ACR_NAME" \
           --sku Basic \
           --admin-enabled true \
-          --tags "$MANAGED_BY_TAG" # Add the tag here
+          --tags "$MANAGED_BY_TAG"
         echo "OK: ACR created."
     fi
-
     echo "
 ###########################################################
 ###   Infrastructure creation is complete.
@@ -84,20 +82,17 @@ case "$ACTION" in
     # --- THIS IS THE UPDATED DESTROY BLOCK ---
     echo "Starting resource destruction..."
     echo "--> Finding all resources in '$RESOURCE_GROUP' with tag '$MANAGED_BY_TAG'..."
-
-    # NEW COMMAND: Use a JMESPath query to filter by tag instead of using the --tag parameter.
-    # The backslash is important to escape the quotes within the query string.
     RESOURCE_IDS=$(az resource list --resource-group "$RESOURCE_GROUP" --query "[?tags.\"managed-by\" == 'github-actions'].id" -o tsv)
 
     if [ -z "$RESOURCE_IDS" ]; then
         echo "INFO: No resources found with the tag '$MANAGED_BY_TAG'. Nothing to delete."
     else
         echo "ACTION: The following resources will be deleted:"
-        # NEW COMMAND: Also update the query for listing the resource names.
         az resource list --resource-group "$RESOURCE_GROUP" --query "[?tags.\"managed-by\" == 'github-actions'].name" -o tsv | xargs -I {} echo "  - {}"
 
         echo "Proceeding with deletion..."
-        az resource delete --ids $RESOURCE_IDS --yes
+        # THE FIX IS HERE: Removed the '--yes' argument from the line below.
+        az resource delete --ids $RESOURCE_IDS
         echo "OK: Deletion of tagged resources is complete."
     fi
     echo "
