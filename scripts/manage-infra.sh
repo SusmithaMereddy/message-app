@@ -104,5 +104,5 @@ fi
 
 echo ""
 echo "----------------------------------------"
-echo " CREATE completed successfully!"
+echo " Resource creation completed successfully!"
 echo "----------------------------------------"
