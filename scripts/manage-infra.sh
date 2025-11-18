@@ -81,21 +81,22 @@ case "$ACTION" in
     ;;
 
   destroy)
+    # --- THIS IS THE UPDATED DESTROY BLOCK ---
     echo "Starting resource destruction..."
     echo "--> Finding all resources in '$RESOURCE_GROUP' with tag '$MANAGED_BY_TAG'..."
 
-    # Get a space-separated list of resource IDs that match the tag.
-    RESOURCE_IDS=$(az resource list --resource-group "$RESOURCE_GROUP" --tag "$MANAGED_BY_TAG" --query "[].id" -o tsv)
+    # NEW COMMAND: Use a JMESPath query to filter by tag instead of using the --tag parameter.
+    # The backslash is important to escape the quotes within the query string.
+    RESOURCE_IDS=$(az resource list --resource-group "$RESOURCE_GROUP" --query "[?tags.\"managed-by\" == 'github-actions'].id" -o tsv)
 
     if [ -z "$RESOURCE_IDS" ]; then
         echo "INFO: No resources found with the tag '$MANAGED_BY_TAG'. Nothing to delete."
     else
         echo "ACTION: The following resources will be deleted:"
-        # List the resource names for clarity in the logs
-        az resource list --resource-group "$RESOURCE_GROUP" --tag "$MANAGED_BY_TAG" --query "[].name" -o tsv | xargs -I {} echo "  - {}"
+        # NEW COMMAND: Also update the query for listing the resource names.
+        az resource list --resource-group "$RESOURCE_GROUP" --query "[?tags.\"managed-by\" == 'github-actions'].name" -o tsv | xargs -I {} echo "  - {}"
 
         echo "Proceeding with deletion..."
-        # The '--ids' parameter can accept multiple space-separated IDs.
         az resource delete --ids $RESOURCE_IDS --yes
         echo "OK: Deletion of tagged resources is complete."
     fi
