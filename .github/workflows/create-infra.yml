@@ -1,0 +1,26 @@
+# Name of the workflow
+name: Create Azure Infrastructure
+
+# This workflow will be triggered MANUALLY from the GitHub Actions tab.
+on:
+  workflow_dispatch:
+
+jobs:
+  provision-infrastructure:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the repository so we can access our script.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Log in to Azure using the Service Principal.
+      # We still need to authenticate to run Azure commands.
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Step 3: Run the shell script to create the infrastructure.
+      - name: Run Infrastructure Creation Script
+        run: ./scripts/create-infra.sh
