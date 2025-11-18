@@ -1,47 +1,38 @@
-# Name of the workflow
-name: Manage Azure Infrastructure
-
-# This workflow will be triggered MANUALLY from the GitHub Actions tab.
+name: Create or Delete Azure Infrastructure
+ 
 on:
   workflow_dispatch:
-    # Add inputs to be provided in the GitHub UI
     inputs:
       action:
-        description: 'Action to perform'
+        description: "Action to perform"
         required: true
         type: choice
         options:
-        - create
-        - destroy
-        default: 'create'
-      resource_group:
-        description: 'Name of the Resource Group'
-        required: true
-        default: 'exr-dvo-intern-inc'
-
+          - create
+          - delete
+ 
 jobs:
-  manage-infrastructure:
-    runs-on: ubuntu-latest
-
+  infra:
+    runs-on: ubuntu-22.04
+ 
     steps:
-      # Step 1: Check out the repository so we can access our script.
+      # Step 1: Checkout code
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      # Step 2: Log in to Azure using the Service Principal.
-      - name: Azure Login
+ 
+      # Step 2: Login to Azure
+      - name: Login to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      # Step 3: Run the Infrastructure Management Script
-      # This single step calls our script and passes the selected action ('create' or 'destroy')
-      # as a command-line argument.
-      - name: Run Infrastructure Script (${{ github.event.inputs.action }})
-        run: ./scripts/manage-infra.sh ${{ github.event.inputs.action }}
-        env:
-          # Pass the workflow inputs and other variables as environment variables
-          SUBSCRIPTION_NAME: "Founder-HUB-Microsoft Azure Sponsorship"
-          RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
-          LOCATION: "centralindia"
-          ACR_NAME: "messageappacr"
+ 
+      # Step 3: Install Container Apps extension
+      - name: Install containerapp extension
+        run: |
+          az extension add --name containerapp --yes || az extension update --name containerapp
+ 
+      # Step 4: Run script with action input (CREATE or DELETE)
+      - name: Run infra script
+        run: |
+          chmod +x scripts/manage-infra.sh
+          ./scripts/manage-infra.sh "${{ github.event.inputs.action }}"
