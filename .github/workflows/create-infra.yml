@@ -1,12 +1,26 @@
 # Name of the workflow
-name: Create Azure Infrastructure
+name: Manage Azure Infrastructure
 
 # This workflow will be triggered MANUALLY from the GitHub Actions tab.
 on:
   workflow_dispatch:
+    # Add inputs to be provided in the GitHub UI
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+        - create
+        - destroy
+        default: 'create'
+      resource_group:
+        description: 'Name of the Resource Group'
+        required: true
+        default: 'exr-dvo-intern-inc'
 
 jobs:
-  provision-infrastructure:
+  manage-infrastructure:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,12 +29,19 @@ jobs:
         uses: actions/checkout@v4
 
       # Step 2: Log in to Azure using the Service Principal.
-      # We still need to authenticate to run Azure commands.
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Step 3: Run the shell script to create the infrastructure.
-      - name: Run Infrastructure Creation Script
-        run: ./scripts/create-infra.sh
+      # Step 3: Run the Infrastructure Management Script
+      # This single step calls our script and passes the selected action ('create' or 'destroy')
+      # as a command-line argument.
+      - name: Run Infrastructure Script (${{ github.event.inputs.action }})
+        run: ./scripts/manage-infra.sh ${{ github.event.inputs.action }}
+        env:
+          # Pass the workflow inputs and other variables as environment variables
+          SUBSCRIPTION_NAME: "Founder-HUB-Microsoft Azure Sponsorship"
+          RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
+          LOCATION: "centralindia"
+          ACR_NAME: "messageappacr"

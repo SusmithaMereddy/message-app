@@ -1,51 +1,103 @@
 #!/bin/bash
 
-# This script is responsible for creating the core Azure infrastructure.
-# It does NOT deploy any application code.
+# This single script is responsible for CREATING or DESTROYING the core Azure infrastructure.
+# It does NOT delete the resource group itself.
 
 set -e # Exit immediately if a command fails
 
-# --- Configuration ---
-SUBSCRIPTION_NAME="Founder-HUB-Microsoft Azure Sponsorship"
-RESOURCE_GROUP="exr-dvo-intern-inc"
-LOCATION="centralindia"
-ACR_NAME="messageappacr"
+# --- The action (create or destroy) must be passed as the first argument ---
+ACTION=$1
+
+if [[ "$ACTION" != "create" && "$ACTION" != "destroy" ]]; then
+  echo "Error: Invalid action specified. Usage: $0 <create|destroy>"
+  exit 1
+fi
+
+# --- Configuration (from environment variables) ---
+: "${SUBSCRIPTION_NAME?SUBSCRIPTION_NAME is not set. Please provide it as an environment variable.}"
+: "${RESOURCE_GROUP?RESOURCE_GROUP is not set. Please provide it as an environment variable.}"
+: "${LOCATION?LOCATION is not set. Please provide it as an environment variable.}"
+: "${ACR_NAME?ACR_NAME is not set. Please provide it as an environment variable.}"
+
+# --- Common Tag for Resource Identification ---
+# This tag is crucial for identifying which resources to delete.
+MANAGED_BY_TAG="managed-by=github-actions"
 
 echo "
 ###########################################################
-###   Azure Infrastructure Setup
+###   Azure Infrastructure Management
+###
+###   Action:         $ACTION
+###   Subscription:   $SUBSCRIPTION_NAME
+###   Resource Group: $RESOURCE_GROUP
 ###########################################################
 "
 echo "--> Setting active Azure Subscription..."
-    az account set --subscription "$SUBSCRIPTION_NAME"
-    echo "OK: Subscription set."
-    echo "==================================================================================="
-echo "--> Verifying Resource Group '$RESOURCE_GROUP'..."
-if az group show --name "$RESOURCE_GROUP" &>/dev/null; then
-    echo "INFO: Resource Group '$RESOURCE_GROUP' already exists."
-else
-    echo "ACTION: Creating Resource Group '$RESOURCE_GROUP' in '$LOCATION'..."
-    az group create --name "$RESOURCE_GROUP" --location "$LOCATION"
-    echo "OK: Resource Group created."
-fi
-echo "==========================================================="
+az account set --subscription "$SUBSCRIPTION_NAME"
+echo "OK: Subscription set."
+echo "==================================================================================="
 
-echo "--> Verifying Azure Container Registry '$ACR_NAME'..."
-if az acr show --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" &>/dev/null; then
-    echo "INFO: ACR '$ACR_NAME' already exists."
-else
-    echo "ACTION: Creating ACR '$ACR_NAME'..."
-    az acr create \
-      --resource-group "$RESOURCE_GROUP" \
-      --name "$ACR_NAME" \
-      --sku Basic \
-      --admin-enabled true
-    echo "OK: ACR created."
-fi
-echo "==========================================================="
 
-echo "
+# --- Main Logic: Execute action based on the input argument ---
+
+case "$ACTION" in
+  create)
+    echo "Starting resource creation..."
+
+    echo "--> Verifying Resource Group '$RESOURCE_GROUP'..."
+    if az group show --name "$RESOURCE_GROUP" &>/dev/null; then
+        echo "INFO: Resource Group '$RESOURCE_GROUP' already exists."
+    else
+        echo "ACTION: Creating Resource Group '$RESOURCE_GROUP' in '$LOCATION'..."
+        az group create --name "$RESOURCE_GROUP" --location "$LOCATION"
+        echo "OK: Resource Group created."
+    fi
+    echo "-----------------------------------------------------------"
+
+    echo "--> Verifying Azure Container Registry '$ACR_NAME'..."
+    if az acr show --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" &>/dev/null; then
+        echo "INFO: ACR '$ACR_NAME' already exists."
+    else
+        echo "ACTION: Creating ACR '$ACR_NAME' and tagging it..."
+        az acr create \
+          --resource-group "$RESOURCE_GROUP" \
+          --name "$ACR_NAME" \
+          --sku Basic \
+          --admin-enabled true \
+          --tags "$MANAGED_BY_TAG" # Add the tag here
+        echo "OK: ACR created."
+    fi
+
+    echo "
 ###########################################################
-###   Infrastructure setup is complete.
+###   Infrastructure creation is complete.
 ###########################################################
 "
+    ;;
+
+  destroy)
+    echo "Starting resource destruction..."
+    echo "--> Finding all resources in '$RESOURCE_GROUP' with tag '$MANAGED_BY_TAG'..."
+
+    # Get a space-separated list of resource IDs that match the tag.
+    RESOURCE_IDS=$(az resource list --resource-group "$RESOURCE_GROUP" --tag "$MANAGED_BY_TAG" --query "[].id" -o tsv)
+
+    if [ -z "$RESOURCE_IDS" ]; then
+        echo "INFO: No resources found with the tag '$MANAGED_BY_TAG'. Nothing to delete."
+    else
+        echo "ACTION: The following resources will be deleted:"
+        # List the resource names for clarity in the logs
+        az resource list --resource-group "$RESOURCE_GROUP" --tag "$MANAGED_BY_TAG" --query "[].name" -o tsv | xargs -I {} echo "  - {}"
+
+        echo "Proceeding with deletion..."
+        # The '--ids' parameter can accept multiple space-separated IDs.
+        az resource delete --ids $RESOURCE_IDS --yes
+        echo "OK: Deletion of tagged resources is complete."
+    fi
+    echo "
+###########################################################
+###   Resource destruction is complete. The resource group '$RESOURCE_GROUP' was NOT deleted.
+###########################################################
+"
+    ;;
+esac
