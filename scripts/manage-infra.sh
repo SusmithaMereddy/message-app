@@ -20,7 +20,6 @@ fi
 : "${ACR_NAME?ACR_NAME is not set. Please provide it as an environment variable.}"
 
 # --- Common Tag for Resource Identification ---
-# This tag is crucial for identifying which resources to delete.
 MANAGED_BY_TAG="managed-by=github-actions"
 
 echo "
@@ -35,6 +34,12 @@ echo "
 echo "--> Setting active Azure Subscription..."
 az account set --subscription "$SUBSCRIPTION_NAME"
 echo "OK: Subscription set."
+
+# --- FIX: Clear any default resource group configuration to prevent CLI conflicts ---
+echo "--> Clearing any default resource group configuration..."
+az configure --defaults group=""
+echo "OK: Default group cleared."
+
 echo "==================================================================================="
 
 
