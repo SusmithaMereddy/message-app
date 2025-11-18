@@ -6,6 +6,7 @@
 set -e # Exit immediately if a command fails
 
 # --- Configuration ---
+SUBSCRIPTION_NAME="Founder-HUB-Microsoft Azure Sponsorship"
 RESOURCE_GROUP="exr-dvo-intern-inc"
 LOCATION="centralindia"
 ACR_NAME="messageappacr"
@@ -15,7 +16,10 @@ echo "
 ###   Azure Infrastructure Setup
 ###########################################################
 "
-
+echo "--> Setting active Azure Subscription..."
+    az account set --subscription "$SUBSCRIPTION_NAME"
+    echo "OK: Subscription set."
+    echo "==================================================================================="
 echo "--> Verifying Resource Group '$RESOURCE_GROUP'..."
 if az group show --name "$RESOURCE_GROUP" &>/dev/null; then
     echo "INFO: Resource Group '$RESOURCE_GROUP' already exists."
