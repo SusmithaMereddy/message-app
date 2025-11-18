@@ -3,7 +3,7 @@ set -euo pipefail
  
 ACTION=${1:-create}   # default = create
  
-# ---------------------- CONFIG ----------------------
+# ---------------------- CONFIGURATION ----------------------
 SUBSCRIPTION_NAME="Founder-HUB-Microsoft Azure Sponsorship"
 RESOURCE_GROUP="exr-dvo-intern-inc"
 LOCATION="Central India"
@@ -17,7 +17,7 @@ echo "   Azure Infrastructure Script ($ACTION)"
 echo "========================================"
 echo ""
  
-# ---------------------- DELETE MODE ----------------------
+# ---------------------- DELETE RESOURCES ----------------------
 if [[ "$ACTION" == "delete" ]]; then
     echo "[DELETE] Removing Azure resources (not deleting RG)..."
  
@@ -52,7 +52,7 @@ if [[ "$ACTION" == "delete" ]]; then
     exit 0
 fi
  
-# ---------------------- CREATE MODE ----------------------
+# ---------------------- CREATE RESOURCES ----------------------
 echo "[INFO] Setting subscription..."
 az account set --subscription "$SUBSCRIPTION_NAME"
  
