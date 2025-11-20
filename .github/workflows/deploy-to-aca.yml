@@ -1,48 +1,68 @@
 name: Deploy to Azure Container Apps
 
-# This workflow can be triggered in two ways:
-# 1. Manually from the GitHub Actions tab (workflow_dispatch)
-# 2. Automatically after the 'Build and Push' workflow completes on the main branch (workflow_run)
-
 on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Image tag to deploy (e.g., latest or a specific commit SHA)"
+        description: "Image tag to deploy (e.g., latest)"
         required: true
         default: "latest"
-
   workflow_run:
-    workflows: ["Build and Push Docker Images to ACR"] # Name of the build workflow
-    types:
-      - completed
-    branches:
-      - main
+    workflows: ["Build and Push Docker Images to ACR"]
+    types: [completed]
+    branches: [main]
 
-# Define environment variables for easy updates
 env:
   RESOURCE_GROUP: "exr-dvo-intern-inc"
-  ACR_NAME: "messageappacr"
-  ACA_ENV_NAME: "messageapp-env" # Use the name from manage-infra.sh
+  ACA_ENV_NAME: "messageapp-env"
   BACKEND_APP_NAME: "message-app-backend"
   FRONTEND_APP_NAME: "message-app-frontend"
+  MONGO_APP_NAME: "message-app-mongo" # Name for our new Mongo container app
 
 jobs:
-  deploy:
-    # Only run this job if the triggering build workflow was successful
+  # JOB 1: DEPLOY THE DATABASE FIRST
+  deploy-mongo:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    
+    outputs:
+      mongo_fqdn: ${{ steps.deploy-mongo-container.outputs.fqdn }} # Output the internal URL
+      
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Login to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # This step intelligently determines which image tag to use based on the trigger
+      - name: Deploy Mongo Container App
+        id: deploy-mongo-container
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appName: ${{ env.MONGO_APP_NAME }}
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          containerAppEnvironment: ${{ env.ACA_ENV_NAME }}
+          imageToDeploy: mongo:latest # Use the official mongo image from Docker Hub
+          
+          # Mongo must be internal. It should NEVER be exposed to the internet.
+          ingress: "internal" 
+          
+          # Use secrets to configure the mongo container on startup
+          environmentVariables: |
+            MONGO_INITDB_ROOT_USERNAME=${{ secrets.MONGO_USERNAME }}
+            MONGO_INITDB_ROOT_PASSWORD=${{ secrets.MONGO_PASSWORD }}
+
+  # JOB 2: DEPLOY THE BACKEND, WHICH DEPENDS ON THE DATABASE
+  deploy-backend:
+    needs: deploy-mongo # This is crucial. It waits for the mongo job to finish.
+    runs-on: ubuntu-latest
+    outputs:
+      backend_fqdn: ${{ steps.deploy-backend-container.outputs.fqdn }}
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          
       - name: Determine Image Tag
         id: get_tag
         run: |
@@ -51,28 +71,50 @@ jobs:
           else
             echo "tag=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
           fi
-        
+          
       - name: Deploy Backend Container App
-        id: deploy-backend
+        id: deploy-backend-container
         uses: azure/container-apps-deploy-action@v1
         with:
           appName: ${{ env.BACKEND_APP_NAME }}
           resourceGroup: ${{ env.RESOURCE_GROUP }}
           containerAppEnvironment: ${{ env.ACA_ENV_NAME }}
           imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP_NAME }}:${{ steps.get_tag.outputs.tag }}
-          
-          # Credentials for pulling from your private ACR
+
           registryUrl: ${{ secrets.ACR_LOGIN_SERVER }}
           registryUsername: ${{ secrets.ACR_USERNAME }}
           registryPassword: ${{ secrets.ACR_PASSWORD }}
-          
-          # Backend-specific settings
-          targetPort: 8080
-          ingress: "internal" # Backend is only accessible within the ACA environment
-          environmentVariables: "JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Calcutta"
 
+          targetPort: 8080
+          ingress: "internal"
+          
+          # THIS IS THE KEY CHANGE: We construct the connection string here
+          environmentVariables: |
+            JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Calcutta
+            SPRING_DATA_MONGODB_URI=mongodb://${{ secrets.MONGO_USERNAME }}:${{ secrets.MONGO_PASSWORD }}@${{ needs.deploy-mongo.outputs.mongo_fqdn }}:27017/message_db?authSource=admin
+
+  # JOB 3: DEPLOY THE FRONTEND, WHICH DEPENDS ON THE BACKEND
+  deploy-frontend:
+    needs: [deploy-mongo, deploy-backend] # Waits for both previous jobs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          
+      - name: Determine Image Tag
+        id: get_tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+          fi
+          
       - name: Deploy Frontend Container App
-        id: deploy-frontend
+        id: deploy-frontend-container
         uses: azure/container-apps-deploy-action@v1
         with:
           appName: ${{ env.FRONTEND_APP_NAME }}
@@ -80,23 +122,14 @@ jobs:
           containerAppEnvironment: ${{ env.ACA_ENV_NAME }}
           imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_APP_NAME }}:${{ steps.get_tag.outputs.tag }}
 
-          # Credentials for pulling from your private ACR
           registryUrl: ${{ secrets.ACR_LOGIN_SERVER }}
           registryUsername: ${{ secrets.ACR_USERNAME }}
           registryPassword: ${{ secrets.ACR_PASSWORD }}
 
-          # Frontend-specific settings
           targetPort: 80
-          ingress: "external" # Frontend is publicly accessible
+          ingress: "external"
+          environmentVariables: "BACKEND_URL=https://${{ needs.deploy-backend.outputs.backend_fqdn }}"
 
-          # This is the crucial step: Pass the backend's internal URL to the frontend
-          environmentVariables: "BACKEND_URL=https://${{ steps.deploy-backend.outputs.fqdn }}"
-          
       - name: Display Frontend URL
         run: |
-          echo "#####################################################"
-          echo "### DEPLOYMENT COMPLETE"
-          echo "#####################################################"
-          echo ""
-          echo "Your application is accessible at:"
-          echo "=> https://${{ steps.deploy-frontend.outputs.fqdn }}"
+          echo "Your application is accessible at: https://${{ steps.deploy-frontend-container.outputs.fqdn }}"
