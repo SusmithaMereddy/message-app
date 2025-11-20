@@ -1,0 +1,102 @@
+name: Deploy to Azure Container Apps
+
+# This workflow can be triggered in two ways:
+# 1. Manually from the GitHub Actions tab (workflow_dispatch)
+# 2. Automatically after the 'Build and Push' workflow completes on the main branch (workflow_run)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (e.g., latest or a specific commit SHA)"
+        required: true
+        default: "latest"
+
+  workflow_run:
+    workflows: ["Build and Push Docker Images to ACR"] # Name of the build workflow
+    types:
+      - completed
+    branches:
+      - main
+
+# Define environment variables for easy updates
+env:
+  RESOURCE_GROUP: "exr-dvo-intern-inc"
+  ACR_NAME: "messageappacr"
+  ACA_ENV_NAME: "messageapp-env" # Use the name from manage-infra.sh
+  BACKEND_APP_NAME: "message-app-backend"
+  FRONTEND_APP_NAME: "message-app-frontend"
+
+jobs:
+  deploy:
+    # Only run this job if the triggering build workflow was successful
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # This step intelligently determines which image tag to use based on the trigger
+      - name: Determine Image Tag
+        id: get_tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+          fi
+        
+      - name: Deploy Backend Container App
+        id: deploy-backend
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appName: ${{ env.BACKEND_APP_NAME }}
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          containerAppEnvironment: ${{ env.ACA_ENV_NAME }}
+          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP_NAME }}:${{ steps.get_tag.outputs.tag }}
+          
+          # Credentials for pulling from your private ACR
+          registryUrl: ${{ secrets.ACR_LOGIN_SERVER }}
+          registryUsername: ${{ secrets.ACR_USERNAME }}
+          registryPassword: ${{ secrets.ACR_PASSWORD }}
+          
+          # Backend-specific settings
+          targetPort: 8080
+          ingress: "internal" # Backend is only accessible within the ACA environment
+          environmentVariables: "JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Calcutta"
+
+      - name: Deploy Frontend Container App
+        id: deploy-frontend
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appName: ${{ env.FRONTEND_APP_NAME }}
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          containerAppEnvironment: ${{ env.ACA_ENV_NAME }}
+          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_APP_NAME }}:${{ steps.get_tag.outputs.tag }}
+
+          # Credentials for pulling from your private ACR
+          registryUrl: ${{ secrets.ACR_LOGIN_SERVER }}
+          registryUsername: ${{ secrets.ACR_USERNAME }}
+          registryPassword: ${{ secrets.ACR_PASSWORD }}
+
+          # Frontend-specific settings
+          targetPort: 80
+          ingress: "external" # Frontend is publicly accessible
+
+          # This is the crucial step: Pass the backend's internal URL to the frontend
+          environmentVariables: "BACKEND_URL=https://${{ steps.deploy-backend.outputs.fqdn }}"
+          
+      - name: Display Frontend URL
+        run: |
+          echo "#####################################################"
+          echo "### DEPLOYMENT COMPLETE"
+          echo "#####################################################"
+          echo ""
+          echo "Your application is accessible at:"
+          echo "=> https://${{ steps.deploy-frontend.outputs.fqdn }}"
