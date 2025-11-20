@@ -9,7 +9,7 @@ RESOURCE_GROUP="exr-dvo-intern-inc"
 LOCATION="Central India"
 ACR_NAME="messageappacr"
 CONTAINER_APP_ENV="messageapp-env"
-LOG_WORKSPACE="workspace-${RESOURCE_GROUP}"
+LOG_WORKSPACE="workspace-${RESOURCE_GROUP}messageapp"
 
 echo ""
 echo "========================================"
