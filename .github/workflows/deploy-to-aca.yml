@@ -36,7 +36,7 @@ jobs:
         id: deploy-mongo-container
         uses: azure/container-apps-deploy-action@v1
         with:
-          appName: ${{ env.MONGO_APP_NAME }}
+          containerAppName: ${{ env.MONGO_APP_NAME }}
           resourceGroup: ${{ env.RESOURCE_GROUP }}
           containerAppEnvironment: ${{ env.ACA_ENV_NAME }}
           imageToDeploy: mongo:latest # Use the official mongo image from Docker Hub
@@ -75,7 +75,7 @@ jobs:
         id: deploy-backend-container
         uses: azure/container-apps-deploy-action@v1
         with:
-          appName: ${{ env.BACKEND_APP_NAME }}
+          containerAppName: ${{ env.BACKEND_APP_NAME }}
           resourceGroup: ${{ env.RESOURCE_GROUP }}
           containerAppEnvironment: ${{ env.ACA_ENV_NAME }}
           imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP_NAME }}:${{ steps.get_tag.outputs.tag }}
@@ -116,7 +116,7 @@ jobs:
         id: deploy-frontend-container
         uses: azure/container-apps-deploy-action@v1
         with:
-          appName: ${{ env.FRONTEND_APP_NAME }}
+          containerAppName: ${{ env.FRONTEND_APP_NAME }}
           resourceGroup: ${{ env.RESOURCE_GROUP }}
           containerAppEnvironment: ${{ env.ACA_ENV_NAME }}
           imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_APP_NAME }}:${{ steps.get_tag.outputs.tag }}
