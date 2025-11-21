@@ -8,8 +8,8 @@ on:
       - main
 
 env:
-  BACKEND_IMAGE_NAME: message-app-backend
-  FRONTEND_IMAGE_NAME: message-app-frontend
+  BACKEND_IMAGE_NAME: backend-app-susmitha
+  FRONTEND_IMAGE_NAME: frontend-app-susmitha
 
 jobs:
   build-and-push-images:
