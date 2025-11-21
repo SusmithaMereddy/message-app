@@ -20,11 +20,14 @@ env:
   FRONTEND_APP_NAME: "frontend-app-susmitha"
 jobs:
   # JOB 1: DEPLOY THE DATABASE FIRST
+  # In .github/workflows/deploy-to-aca.yml
+
+  # JOB 1: DEPLOY THE DATABASE FIRST
   deploy-mongo:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     outputs:
-      mongo_fqdn: ${{ steps.deploy-mongo-container.outputs.fqdn }} # Output the internal URL
+      mongo_fqdn: ${{ steps.deploy-mongo-container.outputs.fqdn }}
       
     steps:
       - name: Login to Azure
@@ -39,12 +42,27 @@ jobs:
           containerAppName: ${{ env.MONGO_APP_NAME }}
           resourceGroup: ${{ env.RESOURCE_GROUP }}
           containerAppEnvironment: ${{ env.ACA_ENV_NAME }}
-          imageToDeploy: mongo:latest # Use the official mongo image from Docker Hub
+          imageToDeploy: mongo:latest
           
-          # Mongo must be internal. It should NEVER be exposed to the internet.
-          ingress: "internal" 
+          ingress: "internal"
+          targetPort: 27017 # Explicitly set the target port for Mongo
           
-          # Use secrets to configure the mongo container on startup
+          # --- FIX #1: GUARANTEE SUFFICIENT RESOURCES ---
+          cpu: "0.5"
+          memory: "1.0Gi"
+          # ----------------------------------------------
+
+          # --- FIX #2: ADD A PATIENT STARTUP PROBE ---
+          # This tells Azure to wait up to 3 minutes (18 * 10s) for Mongo to start
+          # before marking it as unhealthy. This is crucial for databases.
+          startupProbe:
+            type: "tcp"
+            port: 27017
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 18
+          # --------------------------------------------
+
           environmentVariables: |
             MONGO_INITDB_ROOT_USERNAME=${{ secrets.MONGO_USERNAME }}
             MONGO_INITDB_ROOT_PASSWORD=${{ secrets.MONGO_PASSWORD }}
