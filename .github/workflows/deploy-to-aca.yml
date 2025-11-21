@@ -14,11 +14,10 @@ on:
 
 env:
   RESOURCE_GROUP: "exr-dvo-intern-inc"
-  ACA_ENV_NAME: "messageapp-env"
-  BACKEND_APP_NAME: "message-app-backend"
-  FRONTEND_APP_NAME: "message-app-frontend"
-  MONGO_APP_NAME: "message-app-mongo" # Name for our new Mongo container app
-
+  ACA_ENV_NAME: "messageapp-env-susmitha" # <-- MUST match the script
+  MONGO_APP_NAME: "mongo-app-susmitha"
+  BACKEND_APP_NAME: "backend-app-susmitha"
+  FRONTEND_APP_NAME: "frontend-app-susmitha"
 jobs:
   # JOB 1: DEPLOY THE DATABASE FIRST
   deploy-mongo:
