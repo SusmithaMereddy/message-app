@@ -14,10 +14,11 @@ on:
 
 env:
   RESOURCE_GROUP: "exr-dvo-intern-inc"
-  ACA_ENV_NAME: "messageapp-env-susmitha" # <-- MUST match the script
+  ACA_ENV_NAME: "messageapp-env-susmitha"
   MONGO_APP_NAME: "mongo-app-susmitha"
   BACKEND_APP_NAME: "backend-app-susmitha"
   FRONTEND_APP_NAME: "frontend-app-susmitha"
+
 jobs:
   # JOB 1: DEPLOY THE DATABASE FIRST
   deploy-mongo:
@@ -57,9 +58,54 @@ jobs:
           environmentVariables: |
             MONGO_INITDB_ROOT_USERNAME=${{ secrets.MONGO_USERNAME }}
             MONGO_INITDB_ROOT_PASSWORD=${{ secrets.MONGO_PASSWORD }}
+
+  # JOB 2: DEPLOY THE BACKEND, WHICH DEPENDS ON THE DATABASE
+  deploy-backend:
+    needs: deploy-mongo
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    outputs:
+      backend_fqdn: ${{ steps.deploy-backend-container.outputs.fqdn }}
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          
+      - name: Determine Image Tag
+        id: get_tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Deploy Backend Container App
+        id: deploy-backend-container
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          containerAppName: ${{ env.BACKEND_APP_NAME }}
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          containerAppEnvironment: ${{ env.ACA_ENV_NAME }}
+          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP_NAME }}:${{ steps.get_tag.outputs.tag }}
+
+          registryUrl: ${{ secrets.ACR_LOGIN_SERVER }}
+          registryUsername: ${{ secrets.ACR_USERNAME }}
+          registryPassword: ${{ secrets.ACR_PASSWORD }}
+
+          targetPort: 8080
+          ingress: "internal"
+          
+          environmentVariables: |
+            JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Calcutta
+            SPRING_DATA_MONGODB_URI=mongodb://${{ secrets.MONGO_USERNAME }}:${{ secrets.MONGO_PASSWORD }}@${{ needs.deploy-mongo.outputs.mongo_fqdn }}:27017/message_db?authSource=admin
+
   # JOB 3: DEPLOY THE FRONTEND, WHICH DEPENDS ON THE BACKEND
   deploy-frontend:
-    needs: [deploy-mongo, deploy-backend] # Waits for both previous jobs
+    needs: [deploy-mongo, deploy-backend]
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
