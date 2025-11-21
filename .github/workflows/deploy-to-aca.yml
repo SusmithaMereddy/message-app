@@ -20,9 +20,6 @@ env:
   FRONTEND_APP_NAME: "frontend-app-susmitha"
 jobs:
   # JOB 1: DEPLOY THE DATABASE FIRST
-  # In .github/workflows/deploy-to-aca.yml
-
-  # JOB 1: DEPLOY THE DATABASE FIRST
   deploy-mongo:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
@@ -45,71 +42,21 @@ jobs:
           imageToDeploy: mongo:latest
           
           ingress: "internal"
-          targetPort: 27017 # Explicitly set the target port for Mongo
+          targetPort: 27017
           
-          # --- FIX #1: GUARANTEE SUFFICIENT RESOURCES ---
           cpu: "0.5"
           memory: "1.0Gi"
-          # ----------------------------------------------
-
-          # --- FIX #2: ADD A PATIENT STARTUP PROBE ---
-          # This tells Azure to wait up to 3 minutes (18 * 10s) for Mongo to start
-          # before marking it as unhealthy. This is crucial for databases.
+          
           startupProbe:
             type: "tcp"
             port: 27017
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 18
-          # --------------------------------------------
 
           environmentVariables: |
             MONGO_INITDB_ROOT_USERNAME=${{ secrets.MONGO_USERNAME }}
             MONGO_INITDB_ROOT_PASSWORD=${{ secrets.MONGO_PASSWORD }}
-
-  # JOB 2: DEPLOY THE BACKEND, WHICH DEPENDS ON THE DATABASE
-  deploy-backend:
-    needs: deploy-mongo # This is crucial. It waits for the mongo job to finish.
-    runs-on: ubuntu-latest
-    outputs:
-      backend_fqdn: ${{ steps.deploy-backend-container.outputs.fqdn }}
-
-    steps:
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-          
-      - name: Determine Image Tag
-        id: get_tag
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
-          else
-            echo "tag=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
-          fi
-          
-      - name: Deploy Backend Container App
-        id: deploy-backend-container
-        uses: azure/container-apps-deploy-action@v1
-        with:
-          containerAppName: ${{ env.BACKEND_APP_NAME }}
-          resourceGroup: ${{ env.RESOURCE_GROUP }}
-          containerAppEnvironment: ${{ env.ACA_ENV_NAME }}
-          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_APP_NAME }}:${{ steps.get_tag.outputs.tag }}
-
-          registryUrl: ${{ secrets.ACR_LOGIN_SERVER }}
-          registryUsername: ${{ secrets.ACR_USERNAME }}
-          registryPassword: ${{ secrets.ACR_PASSWORD }}
-
-          targetPort: 8080
-          ingress: "internal"
-          
-          # THIS IS THE KEY CHANGE: We construct the connection string here
-          environmentVariables: |
-            JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Calcutta
-            SPRING_DATA_MONGODB_URI=mongodb://${{ secrets.MONGO_USERNAME }}:${{ secrets.MONGO_PASSWORD }}@${{ needs.deploy-mongo.outputs.mongo_fqdn }}:27017/message_db?authSource=admin
-
   # JOB 3: DEPLOY THE FRONTEND, WHICH DEPENDS ON THE BACKEND
   deploy-frontend:
     needs: [deploy-mongo, deploy-backend] # Waits for both previous jobs
