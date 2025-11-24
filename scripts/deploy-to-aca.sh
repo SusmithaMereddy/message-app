@@ -55,7 +55,7 @@ echo "ACA env name: $ACA_ENV"
 echo "Backend image: $BACKEND_IMAGE"
 echo "Frontend image: $FRONTEND_IMAGE"
 
-# Ensure ACA environment exists (create if missing). If you want log workspace linkage, set LOG_WORKSPACE_ID and LOG_WORKSPACE_KEY env vars.
+# Ensure ACA environment exists (create if missing). If you want log workspace linkage, set LOG_WORKSPACE_ID and LOG_WORKSPACE_KEY env variables.
 if ! az containerapp env show -n "$ACA_ENV" -g "$RESOURCE_GROUP" &>/dev/null; then
   echo "Creating Container Apps environment: $ACA_ENV"
   if [[ -n "${LOG_WORKSPACE_ID:-}" && -n "${LOG_WORKSPACE_KEY:-}" ]]; then
