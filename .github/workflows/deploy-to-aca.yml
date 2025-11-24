@@ -1,92 +1,108 @@
-name: Deploy to Azure Container Apps
+name: Deploy to Azure Container Apps (multi-env)
 
-# Trigger manually or on push to main (you can remove the push trigger if you only want manual runs)
 on:
   workflow_dispatch:
     inputs:
+      target_env:
+        description: 'Target environment (dev, qa, staging, prod)'
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - staging
+          - prod
+        default: dev
       image_tag:
-        description: 'Image tag to deploy (sha or tag). Use "latest" to deploy latest.'
+        description: 'Image tag to deploy (sha or latest)'
         required: false
         default: 'latest'
-  push:
-    branches:
-      - main
 
 env:
-  # Image names must match what your build-and-push workflow pushed
   BACKEND_IMAGE_NAME: backend-app-susmitha
   FRONTEND_IMAGE_NAME: frontend-app-susmitha
 
-  # These values should match the infra you created with manage-infra.sh
+  # SAME resource group for all environments
   RESOURCE_GROUP: exr-dvo-intern-inc
   LOCATION: centralindia
-  ACA_ENV_NAME: messageapp-env-susmitha
-
-  # Names for the Container Apps
-  BACKEND_APP_NAME: message-app-backend
-  FRONTEND_APP_NAME: message-app-frontend
 
 jobs:
   deploy:
     runs-on: ubuntu-22.04
+
+    # Use GitHub environments (dev/qa/staging/prod)
+    environment: ${{ github.event.inputs.target_env }}
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # Login to Azure using the same secret you used in other workflows
+      - name: Setup Environment Variables
+        id: vars
+        run: |
+          TARGET="${{ github.event.inputs.target_env }}"
+          TAG="${{ github.event.inputs.image_tag }}"
+
+          # ACA environment name PER environment
+          ACA_ENV_NAME="messageapp-env-${TARGET}"
+
+          # App names PER environment
+          BACKEND_APP_NAME="message-app-backend-${TARGET}"
+          FRONTEND_APP_NAME="message-app-frontend-${TARGET}"
+
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "aca_env_name=$ACA_ENV_NAME" >> "$GITHUB_OUTPUT"
+          echo "backend_app_name=$BACKEND_APP_NAME" >> "$GITHUB_OUTPUT"
+          echo "frontend_app_name=$FRONTEND_APP_NAME" >> "$GITHUB_OUTPUT"
+
       - name: Login to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Ensure containerapp extension is available
-      - name: Ensure Azure Container Apps extension
+      - name: Ensure Container Apps Extension
         run: |
           az extension add --name containerapp --yes || az extension update --name containerapp
 
-      # Login to ACR so az can pull images (optional but helpful)
-      - name: Login to ACR (docker)
+      - name: Login to ACR
         uses: docker/login-action@v3
         with:
           registry: ${{ secrets.ACR_LOGIN_SERVER }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      # Determine which image tag to deploy
-      - name: Set image tag
-        id: vars
+      - name: Deploy Backend App
         run: |
-          TAG="${{ github.event.inputs.image_tag || 'latest' }}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          ACR="${{ secrets.ACR_LOGIN_SERVER }}"
+          IMAGE="$ACR/${{ env.BACKEND_IMAGE_NAME }}:${{ steps.vars.outputs.tag }}"
+          RG="${{ env.RESOURCE_GROUP }}"
+          ENV_NAME="${{ steps.vars.outputs.aca_env_name }}"
+          APP_NAME="${{ steps.vars.outputs.backend_app_name }}"
 
-      # Create/Update backend Container App
-      - name: Deploy Backend to Container Apps
-        env:
-          ACR: ${{ secrets.ACR_LOGIN_SERVER }}
-          BACKEND_IMAGE: ${{ env.BACKEND_IMAGE_NAME }}
-          BACKEND_APP_NAME: ${{ env.BACKEND_APP_NAME }}
-          RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
-          ACA_ENV_NAME: ${{ env.ACA_ENV_NAME }}
-          IMAGE_TAG: ${{ steps.vars.outputs.tag }}
-        run: |
-          IMAGE="$ACR/$BACKEND_IMAGE:$IMAGE_TAG"
-          echo "Backend image to use: $IMAGE"
+          echo "Using backend image: $IMAGE"
 
-          # If the Container App exists, update image; otherwise create it.
-          if az containerapp show --name "$BACKEND_APP_NAME" --resource-group "$RESOURCE_GROUP" &> /dev/null; then
-            echo "Updating backend container app image..."
-            az containerapp update \
-              --name "$BACKEND_APP_NAME" \
-              --resource-group "$RESOURCE_GROUP" \
-              --image "$IMAGE"
+          # Create ACA environment if it doesn't exist
+          if ! az containerapp env show -n "$ENV_NAME" -g "$RG" >/dev/null 2>&1; then
+            echo "Creating ACA environment: $ENV_NAME"
+            az containerapp env create \
+              --name "$ENV_NAME" \
+              --resource-group "$RG" \
+              --location "${{ env.LOCATION }}"
+          fi
+
+          # Create or update the backend ACA
+          if az containerapp show -n "$APP_NAME" -g "$RG" >/dev/null 2>&1; then
+            echo "Backend exists → Updating image"
+            az containerapp update -n "$APP_NAME" -g "$RG" --image "$IMAGE"
           else
-            echo "Creating backend container app..."
+            echo "Backend does not exist → Creating"
             az containerapp create \
-              --name "$BACKEND_APP_NAME" \
-              --resource-group "$RESOURCE_GROUP" \
-              --environment "$ACA_ENV_NAME" \
+              --name "$APP_NAME" \
+              --resource-group "$RG" \
+              --environment "$ENV_NAME" \
               --image "$IMAGE" \
-              --registry-server "${{ secrets.ACR_LOGIN_SERVER }}" \
+              --registry-server "$ACR" \
               --registry-username "${{ secrets.ACR_USERNAME }}" \
               --registry-password "${{ secrets.ACR_PASSWORD }}" \
               --target-port 8080 \
@@ -94,74 +110,50 @@ jobs:
               --env-vars JAVA_TOOL_OPTIONS="-Duser.timezone=Asia/Calcutta"
           fi
 
-          # Ensure the JAVA_TOOL_OPTIONS env var is present (update idempotently)
-          az containerapp update \
-            --name "$BACKEND_APP_NAME" \
-            --resource-group "$RESOURCE_GROUP" \
-            --set-env-vars "JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Calcutta"
-
-          # Capture backend FQDN (may be empty for internal apps; the CLI still returns object)
-          BACKEND_FQDN=$(az containerapp show --name "$BACKEND_APP_NAME" --resource-group "$RESOURCE_GROUP" --query "properties.configuration.ingress.fqdn" -o tsv || echo "")
-          echo "backend_fqdn=$BACKEND_FQDN" >> "$GITHUB_OUTPUT"
-
-      # Create/Update frontend Container App (exposes external ingress)
-      - name: Deploy Frontend to Container Apps
-        env:
-          ACR: ${{ secrets.ACR_LOGIN_SERVER }}
-          FRONTEND_IMAGE: ${{ env.FRONTEND_IMAGE_NAME }}
-          FRONTEND_APP_NAME: ${{ env.FRONTEND_APP_NAME }}
-          RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
-          ACA_ENV_NAME: ${{ env.ACA_ENV_NAME }}
-          IMAGE_TAG: ${{ steps.vars.outputs.tag }}
-          BACKEND_FQDN: ${{ steps.vars.outputs.tag }}  # placeholder; will overwrite below
+      - name: Deploy Frontend App
         run: |
-          IMAGE="$ACR/$FRONTEND_IMAGE:$IMAGE_TAG"
-          echo "Frontend image to use: $IMAGE"
+          ACR="${{ secrets.ACR_LOGIN_SERVER }}"
+          IMAGE="$ACR/${{ env.FRONTEND_IMAGE_NAME }}:${{ steps.vars.outputs.tag }}"
+          RG="${{ env.RESOURCE_GROUP }}"
+          ENV_NAME="${{ steps.vars.outputs.aca_env_name }}"
+          BACKEND_APP_NAME="${{ steps.vars.outputs.backend_app_name }}"
+          FRONTEND_APP_NAME="${{ steps.vars.outputs.frontend_app_name }}"
 
-          # Resolve backend fqdn fresh (in case it was empty earlier)
-          BACKEND_FQDN=$(az containerapp show --name "${{ env.BACKEND_APP_NAME }}" --resource-group "${{ env.RESOURCE_GROUP }}" --query "properties.configuration.ingress.fqdn" -o tsv || echo "")
+          BACKEND_FQDN=$(az containerapp show -n "$BACKEND_APP_NAME" -g "$RG" --query "properties.configuration.ingress.fqdn" -o tsv || echo "")
+
           if [ -z "$BACKEND_FQDN" ]; then
-            echo "WARNING: Backend FQDN is empty. If backend is internal-only, you may need to expose it via a VNet accessible hostname or make backend ingress external."
-            # We still set BACKEND_URL to the best-known value (empty or internal) — user may replace with full URL (ex: https://my-backend.internal)
             BACKEND_URL=""
           else
             BACKEND_URL="https://$BACKEND_FQDN"
           fi
 
-          echo "Configuring frontend to use BACKEND_URL=$BACKEND_URL"
+          echo "Frontend connecting to BACKEND_URL=$BACKEND_URL"
 
-          if az containerapp show --name "$FRONTEND_APP_NAME" --resource-group "$RESOURCE_GROUP" &> /dev/null; then
-            echo "Updating frontend container app image and env..."
+          if az containerapp show -n "$FRONTEND_APP_NAME" -g "$RG" >/dev/null 2>&1; then
+            echo "Updating frontend image + env"
             az containerapp update \
               --name "$FRONTEND_APP_NAME" \
-              --resource-group "$RESOURCE_GROUP" \
+              --resource-group "$RG" \
               --image "$IMAGE" \
-              --set-env-vars "BACKEND_URL=$BACKEND_URL"
+              --set-env-vars BACKEND_URL="$BACKEND_URL"
           else
-            echo "Creating frontend container app..."
+            echo "Creating frontend container app"
             az containerapp create \
               --name "$FRONTEND_APP_NAME" \
-              --resource-group "$RESOURCE_GROUP" \
-              --environment "$ACA_ENV_NAME" \
+              --resource-group "$RG" \
+              --environment "$ENV_NAME" \
               --image "$IMAGE" \
-              --registry-server "${{ secrets.ACR_LOGIN_SERVER }}" \
+              --registry-server "$ACR" \
               --registry-username "${{ secrets.ACR_USERNAME }}" \
               --registry-password "${{ secrets.ACR_PASSWORD }}" \
               --target-port 80 \
               --ingress external
 
-            # Update the environment variable BACKEND_URL
             az containerapp update \
               --name "$FRONTEND_APP_NAME" \
-              --resource-group "$RESOURCE_GROUP" \
-              --set-env-vars "BACKEND_URL=$BACKEND_URL"
+              --resource-group "$RG" \
+              --set-env-vars BACKEND_URL="$BACKEND_URL"
           fi
 
-          # Print the external URL for the frontend app (if available)
-          FRONTEND_FQDN=$(az containerapp show --name "$FRONTEND_APP_NAME" --resource-group "$RESOURCE_GROUP" --query "properties.configuration.ingress.fqdn" -o tsv || echo "")
-          if [ -n "$FRONTEND_FQDN" ]; then
-            echo "FRONTEND_URL=https://$FRONTEND_FQDN" >> "$GITHUB_OUTPUT"
-            echo "Frontend is available at: https://$FRONTEND_FQDN"
-          else
-            echo "Frontend FQDN is not available yet. It may take a few moments to appear in Azure."
-          fi
+          FRONTEND_FQDN=$(az containerapp show -n "$FRONTEND_APP_NAME" -g "$RG" --query "properties.configuration.ingress.fqdn" -o tsv)
+          echo "Frontend URL: https://$FRONTEND_FQDN"
