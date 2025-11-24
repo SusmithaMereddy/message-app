@@ -46,4 +46,10 @@ jobs:
           LOG_WORKSPACE_KEY: ${{ secrets.LOG_WORKSPACE_KEY || '' }}
         run: |
           chmod +x ./scripts/deploy-to-aca.sh
-          ./scripts/deploy-to-aca.sh -e "${{ github.event.inputs.target_env }}" -t "${{ github.event.inputs.image_tag }}"
+
+          # Use provided input when present; otherwise default to "dev"
+          TARGET="${{ github.event.inputs.target_env || 'dev' }}"
+          IMAGE_TAG="${{ github.event.inputs.image_tag || 'latest' }}"
+
+          echo "Deploying to TARGET=$TARGET with tag=$IMAGE_TAG"
+          ./scripts/deploy-to-aca.sh -e "$TARGET" -t "$IMAGE_TAG"
