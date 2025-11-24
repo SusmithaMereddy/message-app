@@ -1,4 +1,4 @@
-name: Deploy to Azure Container Apps (script-driven)
+name: Deploy to Azure Container Apps
 
 on:
   workflow_dispatch:
