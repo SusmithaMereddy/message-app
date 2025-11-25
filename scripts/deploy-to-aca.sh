@@ -50,15 +50,26 @@ fi
 
 # Backend (internal)
 if az containerapp show -n "$BACKEND_APP" -g "$RESOURCE_GROUP" &>/dev/null; then
-  az containerapp update --name "$BACKEND_APP" --resource-group "$RESOURCE_GROUP" --image "$BACKEND_IMAGE"
+  az containerapp update \
+  --name "$BACKEND_APP" \
+  --resource-group "$RESOURCE_GROUP" \
+  --image "$ACR_LOGIN_SERVER/backend-app-susmitha:$TAG" \
+  --registry-server "$ACR_LOGIN_SERVER" \
+  --registry-username "$ACR_USERNAME" \
+  --registry-password "$ACR_PASSWORD"
+
 else
   az containerapp create \
-    --name "$BACKEND_APP" \
-    --resource-group "$RESOURCE_GROUP" \
-    --environment "$ACA_ENV" \
-    --image "$BACKEND_IMAGE" \
-    --target-port 8080 \
-    --ingress internal
+  --name "$BACKEND_APP" \
+  --resource-group "$RESOURCE_GROUP" \
+  --environment "$ACA_ENV" \
+  --image "$ACR_LOGIN_SERVER/backend-app-susmitha:$TAG" \
+  --registry-server "$ACR_LOGIN_SERVER" \
+  --registry-username "$ACR_USERNAME" \
+  --registry-password "$ACR_PASSWORD" \
+  --target-port 8080 \
+  --ingress internal
+
 fi
 
 # Backend URL (internal)
