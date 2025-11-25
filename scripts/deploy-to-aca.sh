@@ -64,11 +64,15 @@ else
   --resource-group "$RESOURCE_GROUP" \
   --environment "$ACA_ENV" \
   --image "$ACR_LOGIN_SERVER/backend-app-susmitha:$TAG" \
-  --registry-server "$ACR_LOGIN_SERVER" \
-  --registry-username "$ACR_USERNAME" \
-  --registry-password "$ACR_PASSWORD" \
   --target-port 8080 \
   --ingress internal
+
+  az containerapp registry set \
+  --name "$APP_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --server "$ACR" \
+  --username "$ACR_USERNAME" \
+  --password "$ACR_PASSWORD"
 
 fi
 
@@ -86,12 +90,20 @@ if az containerapp show -n "$FRONTEND_APP" -g "$RESOURCE_GROUP" &>/dev/null; the
       --set-env-vars BACKEND_URL="$BACKEND_URL"
 else
   az containerapp create \
-      --name "$FRONTEND_APP" \
-      --resource-group "$RESOURCE_GROUP" \
-      --environment "$ACA_ENV" \
-      --image "$FRONTEND_IMAGE" \
-      --target-port 80 \
-      --ingress external
+  --name "$FRONTEND_APP_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --environment "$ENV_NAME" \
+  --image "$IMAGE" \
+  --target-port 80 \
+  --ingress external
+
+az containerapp registry set \
+  --name "$FRONTEND_APP_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --server "$ACR" \
+  --username "$ACR_USERNAME" \
+  --password "$ACR_PASSWORD"
+
 fi
 
 echo "Deployment complete for environment: $ENV"
