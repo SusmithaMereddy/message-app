@@ -1,4 +1,4 @@
-name: Build and Push Docker Images to ACR
+name: Build and Push Docker Images to ACR (multi-env)
 
 on:
   workflow_dispatch:
@@ -32,24 +32,24 @@ jobs:
       - name: ACR Login
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets['ACR_LOGIN_SERVER_' + (github.event.inputs.target_env || 'dev')] }}
-          username: ${{ secrets['ACR_USERNAME_' + (github.event.inputs.target_env || 'dev')] }}
-          password: ${{ secrets['ACR_PASSWORD_' + (github.event.inputs.target_env || 'dev')] }}
+          registry: ${{ secrets[ format('ACR_LOGIN_SERVER_{0}', github.event.inputs.target_env) ] }}
+          username: ${{ secrets[ format('ACR_USERNAME_{0}', github.event.inputs.target_env) ] }}
+          password: ${{ secrets[ format('ACR_PASSWORD_{0}', github.event.inputs.target_env) ] }}
 
       - name: Build and Push Backend Image
         run: |
           IMAGE_VERSION="${{ github.event.inputs.image_tag || github.sha }}"
           docker build -t ${{ env.BACKEND_IMAGE_NAME }} ./backend
-          docker tag ${{ env.BACKEND_IMAGE_NAME }} ${{ secrets['ACR_LOGIN_SERVER_' + (github.event.inputs.target_env || 'dev')] }}/${{ env.BACKEND_IMAGE_NAME }}:$IMAGE_VERSION
-          docker push ${{ secrets['ACR_LOGIN_SERVER_' + (github.event.inputs.target_env || 'dev')] }}/${{ env.BACKEND_IMAGE_NAME }}:$IMAGE_VERSION
-          docker tag ${{ env.BACKEND_IMAGE_NAME }} ${{ secrets['ACR_LOGIN_SERVER_' + (github.event.inputs.target_env || 'dev')] }}/${{ env.BACKEND_IMAGE_NAME }}:latest
-          docker push ${{ secrets['ACR_LOGIN_SERVER_' + (github.event.inputs.target_env || 'dev')] }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+          docker tag ${{ env.BACKEND_IMAGE_NAME }} ${{ secrets[ format('ACR_LOGIN_SERVER_{0}', github.event.inputs.target_env) ] }}/${{ env.BACKEND_IMAGE_NAME }}:$IMAGE_VERSION
+          docker push ${{ secrets[ format('ACR_LOGIN_SERVER_{0}', github.event.inputs.target_env) ] }}/${{ env.BACKEND_IMAGE_NAME }}:$IMAGE_VERSION
+          docker tag ${{ env.BACKEND_IMAGE_NAME }} ${{ secrets[ format('ACR_LOGIN_SERVER_{0}', github.event.inputs.target_env) ] }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+          docker push ${{ secrets[ format('ACR_LOGIN_SERVER_{0}', github.event.inputs.target_env) ] }}/${{ env.BACKEND_IMAGE_NAME }}:latest
 
       - name: Build and Push Frontend Image
         run: |
           IMAGE_VERSION="${{ github.event.inputs.image_tag || github.sha }}"
           docker build -t ${{ env.FRONTEND_IMAGE_NAME }} ./frontend
-          docker tag ${{ env.FRONTEND_IMAGE_NAME }} ${{ secrets['ACR_LOGIN_SERVER_' + (github.event.inputs.target_env || 'dev')] }}/${{ env.FRONTEND_IMAGE_NAME }}:$IMAGE_VERSION
-          docker push ${{ secrets['ACR_LOGIN_SERVER_' + (github.event.inputs.target_env || 'dev')] }}/${{ env.FRONTEND_IMAGE_NAME }}:$IMAGE_VERSION
-          docker tag ${{ env.FRONTEND_IMAGE_NAME }} ${{ secrets['ACR_LOGIN_SERVER_' + (github.event.inputs.target_env || 'dev')] }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
-          docker push ${{ secrets['ACR_LOGIN_SERVER_' + (github.event.inputs.target_env || 'dev')] }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+          docker tag ${{ env.FRONTEND_IMAGE_NAME }} ${{ secrets[ format('ACR_LOGIN_SERVER_{0}', github.event.inputs.target_env) ] }}/${{ env.FRONTEND_IMAGE_NAME }}:$IMAGE_VERSION
+          docker push ${{ secrets[ format('ACR_LOGIN_SERVER_{0}', github.event.inputs.target_env) ] }}/${{ env.FRONTEND_IMAGE_NAME }}:$IMAGE_VERSION
+          docker tag ${{ env.FRONTEND_IMAGE_NAME }} ${{ secrets[ format('ACR_LOGIN_SERVER_{0}', github.event.inputs.target_env) ] }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+          docker push ${{ secrets[ format('ACR_LOGIN_SERVER_{0}', github.event.inputs.target_env) ] }}/${{ env.FRONTEND_IMAGE_NAME }}:latest

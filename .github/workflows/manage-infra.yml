@@ -1,4 +1,4 @@
-name: Create or Delete Azure Infrastructure
+name: Manage infra (multi-env)
 
 on:
   workflow_dispatch:
@@ -27,7 +27,7 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets['AZURE_CREDENTIALS_' + github.event.inputs.target_env] }}
+          creds: ${{ secrets[ format('AZURE_CREDENTIALS_{0}', github.event.inputs.target_env) ] }}
 
       - name: Install containerapp extension
         run: |

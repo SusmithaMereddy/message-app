@@ -1,4 +1,4 @@
-name: Deploy to Azure Container Apps
+name: Deploy to Azure Container Apps (multi-env)
 
 on:
   workflow_dispatch:
@@ -29,7 +29,7 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets['AZURE_CREDENTIALS_' + github.event.inputs.target_env] }}
+          creds: ${{ secrets[ format('AZURE_CREDENTIALS_{0}', github.event.inputs.target_env) ] }}
 
       - name: Ensure containerapp extension
         run: |
@@ -39,11 +39,11 @@ jobs:
         env:
           RESOURCE_GROUP: exr-dvo-intern-inc
           LOCATION: centralindia
-          ACR_LOGIN_SERVER: ${{ secrets['ACR_LOGIN_SERVER_' + github.event.inputs.target_env] }}
-          ACR_USERNAME: ${{ secrets['ACR_USERNAME_' + github.event.inputs.target_env] }}
-          ACR_PASSWORD: ${{ secrets['ACR_PASSWORD_' + github.event.inputs.target_env] }}
-          LOG_WORKSPACE_ID: ${{ secrets['LOG_WORKSPACE_ID_' + github.event.inputs.target_env] || '' }}
-          LOG_WORKSPACE_KEY: ${{ secrets['LOG_WORKSPACE_KEY_' + github.event.inputs.target_env] || '' }}
+          ACR_LOGIN_SERVER: ${{ secrets[ format('ACR_LOGIN_SERVER_{0}', github.event.inputs.target_env) ] }}
+          ACR_USERNAME: ${{ secrets[ format('ACR_USERNAME_{0}', github.event.inputs.target_env) ] }}
+          ACR_PASSWORD: ${{ secrets[ format('ACR_PASSWORD_{0}', github.event.inputs.target_env) ] }}
+          LOG_WORKSPACE_ID: ${{ secrets[ format('LOG_WORKSPACE_ID_{0}', github.event.inputs.target_env) ] }}
+          LOG_WORKSPACE_KEY: ${{ secrets[ format('LOG_WORKSPACE_KEY_{0}', github.event.inputs.target_env) ] }}
         run: |
           chmod +x ./scripts/deploy-to-aca.sh
           TARGET="${{ github.event.inputs.target_env }}"
