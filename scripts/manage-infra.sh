@@ -72,7 +72,7 @@ if [[ "$ACTION" == "delete" ]]; then
   echo "----------------------------------------------"
 
   for ENV in "${ENVS[@]}"; do
-    ACR_NAME="messageappacr-${ENV}-susmitha"
+    ACR_NAME="messageappacr${ENV}susmitha"
     LOG_WS="messageapp-logs-${ENV}"
     ACA_ENV="messageapp-env-${ENV}"
 
@@ -117,7 +117,7 @@ for ENV in "${ENVS[@]}"; do
   echo "         ENVIRONMENT: $ENV"
   echo "----------------------------------------------"
 
-  ACR_NAME="messageappacr-${ENV}-susmitha"
+  ACR_NAME="messageappacr${ENV}susmitha"
   LOG_WS="messageapp-logs-${ENV}"
   ACA_ENV="messageapp-env-${ENV}"
 
