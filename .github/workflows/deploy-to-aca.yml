@@ -1,18 +1,21 @@
-name: Deploy to Azure Container Apps (NO BUILD)
+name: Deploy to Azure Container Apps
 
 on:
   workflow_dispatch:
     inputs:
       target_env:
-        description: 'Environment to deploy (dev|qa|staging|prod)'
+        description: 'Target environment (dev|qa|staging|prod)'
         required: true
         type: choice
         options: [dev, qa, staging, prod]
         default: dev
       image_tag:
         description: 'Image tag to deploy (sha or latest)'
-        required: true
+        required: false
         default: latest
+  push:
+    branches:
+      - main
 
 jobs:
   deploy:
@@ -20,26 +23,30 @@ jobs:
     environment: ${{ github.event.inputs.target_env }}
 
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets['AZURE_CREDENTIALS_' + github.event.inputs.target_env] }}
 
       - name: Ensure containerapp extension
-        run: az extension add --name containerapp --yes || az extension update --name containerapp
+        run: |
+          az extension add --name containerapp --yes || az extension update --name containerapp
 
-      - name: Deploy using script
+      - name: Prepare and run deploy script
         env:
           RESOURCE_GROUP: exr-dvo-intern-inc
           LOCATION: centralindia
-          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+          ACR_LOGIN_SERVER: ${{ secrets['ACR_LOGIN_SERVER_' + github.event.inputs.target_env] }}
+          ACR_USERNAME: ${{ secrets['ACR_USERNAME_' + github.event.inputs.target_env] }}
+          ACR_PASSWORD: ${{ secrets['ACR_PASSWORD_' + github.event.inputs.target_env] }}
+          LOG_WORKSPACE_ID: ${{ secrets['LOG_WORKSPACE_ID_' + github.event.inputs.target_env] || '' }}
+          LOG_WORKSPACE_KEY: ${{ secrets['LOG_WORKSPACE_KEY_' + github.event.inputs.target_env] || '' }}
         run: |
-          chmod +x scripts/deploy-to-aca.sh
-          ./scripts/deploy-to-aca.sh \
-              -e "${{ github.event.inputs.target_env }}" \
-              -t "${{ github.event.inputs.image_tag }}"
+          chmod +x ./scripts/deploy-to-aca.sh
+          TARGET="${{ github.event.inputs.target_env }}"
+          IMAGE_TAG="${{ github.event.inputs.image_tag || 'latest' }}"
+          echo "Deploying to TARGET=$TARGET with tag=$IMAGE_TAG"
+          ./scripts/deploy-to-aca.sh -e "$TARGET" -t "$IMAGE_TAG"

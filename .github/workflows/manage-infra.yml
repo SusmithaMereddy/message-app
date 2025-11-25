@@ -3,40 +3,40 @@ name: Create or Delete Azure Infrastructure
 on:
   workflow_dispatch:
     inputs:
+      target_env:
+        description: "Target environment"
+        required: true
+        type: choice
+        options: [dev, qa, staging, prod]
+        default: dev
       action:
         description: "Action to perform"
         required: true
         type: choice
-        options:
-          - create
-          - delete
+        options: [create, delete]
+        default: create
 
 jobs:
   azure-infrastructure:
     runs-on: ubuntu-22.04
 
     steps:
-      # Step 1: Checkout code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Login to Azure
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets['AZURE_CREDENTIALS_' + github.event.inputs.target_env] }}
 
-      # Step 3: Install Container Apps extension
       - name: Install containerapp extension
         run: |
           az extension add --name containerapp --yes || az extension update --name containerapp
 
-      # Step 4: Run script with action input (CREATE or DELETE)
       - name: Run infra script
         env:
-          # Provide the SP appId (clientId) that GitHub uses for deployments.
-          # Create a repository secret named DEPLOY_SP_APPID with the appId value
-          AZURE_DEPLOY_SP_APPID: ${{ secrets.DEPLOY_SP_APPID }}
+          RESOURCE_GROUP: exr-dvo-intern-inc
+          LOCATION: centralindia
         run: |
           chmod +x scripts/manage-infra.sh
-          ./scripts/manage-infra.sh "${{ github.event.inputs.action }}"
+          ./scripts/manage-infra.sh -e "${{ github.event.inputs.target_env }}" -a "${{ github.event.inputs.action }}"
