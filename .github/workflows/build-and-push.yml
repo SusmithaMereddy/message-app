@@ -1,7 +1,5 @@
-# Name of the GitHub Actions workflow
-name: Build and Push Docker Images to ACR
+name: Build and Push Docker Images (CI -> DEV ACR)
 
-# Trigger on every push to the 'main' branch
 on:
   push:
     branches:
@@ -12,38 +10,33 @@ env:
   FRONTEND_IMAGE_NAME: frontend-app-susmitha
 
 jobs:
-  build-and-push-images:
+  build-and-push:
     runs-on: ubuntu-latest
-
     steps:
-      # Step 1: Check out your repository code.
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Log in directly to the Azure Container Registry.
-      - name: ACR Login
+      - name: Log in to DEV ACR
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.ACR_LOGIN_SERVER }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+          registry: ${{ secrets.DEV_ACR_LOGIN_SERVER }}
+          username: ${{ secrets.DEV_ACR_USERNAME }}
+          password: ${{ secrets.DEV_ACR_PASSWORD }}
 
-      # Step 3: Build and push the Backend Docker image.
-      - name: Build and Push Backend Image
+      - name: Build and push Backend image
         run: |
-          IMAGE_VERSION=${{ github.sha }}
+          IMAGE_TAG=${{ github.sha }}
           docker build -t ${{ env.BACKEND_IMAGE_NAME }} ./backend
-          docker tag ${{ env.BACKEND_IMAGE_NAME }} ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE_NAME }}:$IMAGE_VERSION
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE_NAME }}:$IMAGE_VERSION
-          docker tag ${{ env.BACKEND_IMAGE_NAME }} ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE_NAME }}:latest
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+          docker tag ${{ env.BACKEND_IMAGE_NAME }} ${{ secrets.DEV_ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE_NAME }}:$IMAGE_TAG
+          docker push ${{ secrets.DEV_ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE_NAME }}:$IMAGE_TAG
+          docker tag ${{ env.BACKEND_IMAGE_NAME }} ${{ secrets.DEV_ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+          docker push ${{ secrets.DEV_ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE_NAME }}:latest
 
-      # Step 4: Build and push the Frontend Docker image.
-      - name: Build and Push Frontend Image
+      - name: Build and push Frontend image
         run: |
-          IMAGE_VERSION=${{ github.sha }}
+          IMAGE_TAG=${{ github.sha }}
           docker build -t ${{ env.FRONTEND_IMAGE_NAME }} ./frontend
-          docker tag ${{ env.FRONTEND_IMAGE_NAME }} ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE_NAME }}:$IMAGE_VERSION
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE_NAME }}:$IMAGE_VERSION
-          docker tag ${{ env.FRONTEND_IMAGE_NAME }} ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+          docker tag ${{ env.FRONTEND_IMAGE_NAME }} ${{ secrets.DEV_ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE_NAME }}:$IMAGE_TAG
+          docker push ${{ secrets.DEV_ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE_NAME }}:$IMAGE_TAG
+          docker tag ${{ env.FRONTEND_IMAGE_NAME }} ${{ secrets.DEV_ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+          docker push ${{ secrets.DEV_ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
