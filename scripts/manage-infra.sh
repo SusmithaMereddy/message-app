@@ -37,7 +37,7 @@ SUBSCRIPTION_NAME="${SUBSCRIPTION_NAME:-Founder-HUB-Microsoft Azure Sponsorship}
 RESOURCE_GROUP="${RESOURCE_GROUP:-exr-dvo-intern-inc}"
 LOCATION="${LOCATION:-centralindia}"
 UNIQUE_SUFFIX="susmitha"
-ACR_NAME="messageappacr-${ENV}-${UNIQUE_SUFFIX}"
+ACR_NAME="messageappacr${ENV}${UNIQUE_SUFFIX}"
 CONTAINER_APP_ENV="messageapp-env-${ENV}-${UNIQUE_SUFFIX}"
 LOG_WORKSPACE="workspace-${ENV}-${UNIQUE_SUFFIX}"
 
