@@ -13,9 +13,6 @@ on:
         description: 'Image tag to push (sha or latest)'
         required: false
         default: latest
-  push:
-    branches:
-      - main
 
 env:
   BACKEND_IMAGE_NAME: backend-app-susmitha

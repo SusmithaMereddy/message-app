@@ -13,9 +13,6 @@ on:
         description: 'Image tag to deploy (sha or latest)'
         required: false
         default: latest
-  push:
-    branches:
-      - main
 
 jobs:
   deploy:
