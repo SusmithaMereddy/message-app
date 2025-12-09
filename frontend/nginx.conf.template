@@ -1,25 +1,19 @@
 server {
     listen 80;
 
-    # This is the root directory for your static files (HTML, CSS, JS)
+    # Serve static files from the root
     location / {
         root   /usr/share/nginx/html;
         index  index.html;
-        # This line is important for client-side routing, good practice to have
         try_files $uri $uri/ /index.html;
     }
 
-    # This is the reverse proxy rule.
-location /api/ {
-    # Add a trailing slash to the URL.
-    # This tells Nginx to append the rest of the path correctly.
-    proxy_pass ${BACKEND_URL}/;
-
-    # Set the Host header to the backend's actual hostname.
-    # This is the crucial fix for the 502 error.
-    proxy_set_header Host $proxy_host;
+    # This is the simplified reverse proxy rule for local development.
+   location /api/ {
+    # NOTE: no trailing slash here
+    proxy_pass ${BACKEND_URL};
     
-    # Standard headers to pass along client information.
+    proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;

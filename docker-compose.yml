@@ -28,6 +28,8 @@ services:
       - "8080:80"    # Map container's 80 to host's 8080 (our main entry point)
     depends_on:
       - backend
+    environment:
+    - BACKEND_URL=http://backend:8080
 
 volumes:
   mongo-data:
