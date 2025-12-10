@@ -81,8 +81,11 @@ fi
 # Create/update backend (internal)
 if az containerapp show -n "$BACKEND_APP" -g "$RESOURCE_GROUP" &>/dev/null; then
   echo "Updating backend $BACKEND_APP -> $BACKEND_IMAGE"
-  az containerapp update --name "$BACKEND_APP" --resource-group "$RESOURCE_GROUP" --image "$BACKEND_IMAGE" \
-    --registry-server "$ACR" --registry-username "$ACR_USERNAME" --registry-password "$ACR_PASSWORD"
+  # Only update the image on existing app. Do not pass registry flags to `update`.
+  az containerapp update \
+    --name "$BACKEND_APP" \
+    --resource-group "$RESOURCE_GROUP" \
+    --image "$BACKEND_IMAGE"
 else
   echo "Creating backend $BACKEND_APP (internal)"
   az containerapp create \
@@ -98,8 +101,8 @@ else
     --env-vars JAVA_TOOL_OPTIONS="-Duser.timezone=Asia/Kolkata"
 fi
 
-# Ensure JAVA_TOOL_OPTIONS set idempotently
-az containerapp update --name "$BACKEND_APP" --resource-group "$RESOURCE_GROUP" --set-env-vars "JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Kolkata"
+# Ensure JAVA_TOOL_OPTIONS set idempotently (will not fail if already set)
+az containerapp update --name "$BACKEND_APP" --resource-group "$RESOURCE_GROUP" --set-env-vars "JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Kolkata" || true
 
 # Get backend fqdn if any (internal likely empty)
 BACKEND_FQDN=$(az containerapp show -n "$BACKEND_APP" -g "$RESOURCE_GROUP" --query "properties.configuration.ingress.fqdn" -o tsv || true)
@@ -113,8 +116,11 @@ echo "Computed BACKEND_URL='$BACKEND_URL'"
 # Create/update frontend (external)
 if az containerapp show -n "$FRONTEND_APP" -g "$RESOURCE_GROUP" &>/dev/null; then
   echo "Updating frontend $FRONTEND_APP -> $FRONTEND_IMAGE"
-  az containerapp update --name "$FRONTEND_APP" --resource-group "$RESOURCE_GROUP" --image "$FRONTEND_IMAGE" \
-    --registry-server "$ACR" --registry-username "$ACR_USERNAME" --registry-password "$ACR_PASSWORD" \
+  # Only update the image and env var on existing app. Do not pass registry flags to `update`.
+  az containerapp update \
+    --name "$FRONTEND_APP" \
+    --resource-group "$RESOURCE_GROUP" \
+    --image "$FRONTEND_IMAGE" \
     --set-env-vars "BACKEND_URL=$BACKEND_URL"
 else
   echo "Creating frontend $FRONTEND_APP (external)"
@@ -129,9 +135,15 @@ else
     --target-port 80 \
     --ingress external
 
+  # After create, ensure BACKEND_URL env is set
   az containerapp update --name "$FRONTEND_APP" --resource-group "$RESOURCE_GROUP" --set-env-vars "BACKEND_URL=$BACKEND_URL"
 fi
 
 FRONTEND_FQDN=$(az containerapp show -n "$FRONTEND_APP" -g "$RESOURCE_GROUP" --query "properties.configuration.ingress.fqdn" -o tsv || true)
-echo "Frontend URL: ${FRONTEND_FQDN:+https://$FRONTEND_FQDN}"
+if [[ -n "$FRONTEND_FQDN" ]]; then
+  echo "Frontend URL: https://$FRONTEND_FQDN"
+else
+  echo "Frontend has no public ingress FQDN yet (check ingress setting or creation logs)."
+fi
+
 echo "Deployment completed."
