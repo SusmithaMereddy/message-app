@@ -102,7 +102,7 @@ else
 fi
 
 # Ensure JAVA_TOOL_OPTIONS set idempotently (will not fail if already set)
-az containerapp update --name "$BACKEND_APP" --resource-group "$RESOURCE_GROUP" --set-env-vars "JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Kolkata" || true
+az containerapp update --name "$BACKEND_APP" --resource-group "$RESOURCE_GROUP" --ingress external --set-env-vars "JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Kolkata" || true
 
 # Get backend fqdn if any (internal likely empty)
 BACKEND_FQDN=$(az containerapp show -n "$BACKEND_APP" -g "$RESOURCE_GROUP" --query "properties.configuration.ingress.fqdn" -o tsv || true)
