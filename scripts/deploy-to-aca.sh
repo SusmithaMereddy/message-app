@@ -107,7 +107,7 @@ az containerapp update --name "$BACKEND_APP" --resource-group "$RESOURCE_GROUP" 
 # Get backend fqdn if any (internal likely empty)
 BACKEND_FQDN=$(az containerapp show -n "$BACKEND_APP" -g "$RESOURCE_GROUP" --query "properties.configuration.ingress.fqdn" -o tsv || true)
 if [[ -n "$BACKEND_FQDN" ]]; then
-  BACKEND_URL="https://$BACKEND_FQDN"
+  BACKEND_URL="http://$BACKEND_FQDN"
 else
   BACKEND_URL=""
 fi
