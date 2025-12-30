@@ -8,10 +8,10 @@ server {
     }
 
     location /api/ {
-        proxy_pass $BACKEND_URL;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto http;
+    proxy_pass http://message-app-backend-dev.internal.politebush-e7a56d19.centralindia.azurecontainerapps.io;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
